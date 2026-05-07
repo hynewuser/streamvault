@@ -1,0 +1,25 @@
+app = "streamvault"
+primary_region = "ams"
+
+[build]
+  dockerfile = "docker/backend.Dockerfile"
+
+[env]
+  NODE_ENV = "production"
+  BACKEND_PORT = "4000"
+
+[http_service]
+  internal_port = 4000
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[mounts]]
+  source = "streamvault_data"
+  destination = "/app/data"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 512
