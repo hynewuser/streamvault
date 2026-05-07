@@ -1,0 +1,163 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Stream {
+  id            String   @id @default(cuid())
+  videoId       String   @unique
+  channelId     String?
+  channelName   String?
+  title         String?
+  status        String   @default("PENDING")
+  startedAt     DateTime?
+  endedAt       DateTime?
+  lastMessageAt DateTime?
+  messageCount  Int      @default(0)
+  errorCount    Int      @default(0)
+  lastError     String?
+  meta          String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  messages Message[]
+  exports  ExportArchive[]
+
+  @@index([status])
+  @@index([channelId])
+  @@index([createdAt])
+}
+
+model Author {
+  id            String   @id @default(cuid())
+  channelId     String   @unique
+  name          String
+  photo         String?
+  isVerified    Boolean  @default(false)
+  firstSeenAt   DateTime @default(now())
+  lastSeenAt    DateTime @default(now())
+  messageCount  Int      @default(0)
+
+  messages Message[]
+
+  @@index([name])
+}
+
+model Message {
+  id                String   @id @default(cuid())
+  streamId          String
+  videoId           String
+  messageId         String
+  type              String   @default("text")
+  authorId          String?
+  authorChannelId   String
+  authorName        String
+  authorPhoto       String?
+  isMember          Boolean  @default(false)
+  isModerator       Boolean  @default(false)
+  isOwner           Boolean  @default(false)
+  isVerified        Boolean  @default(false)
+  badges            String   @default("[]")
+  text              String
+  rawHtml           String?
+  superchatAmount   Float?
+  superchatCurrency String?
+  superchatColor    String?
+  emojis            String   @default("[]")
+  publishedAt       DateTime
+  capturedAt        DateTime @default(now())
+  raw               String?
+
+  stream Stream  @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  author Author? @relation(fields: [authorId], references: [id])
+
+  @@unique([streamId, messageId])
+  @@index([streamId])
+  @@index([authorChannelId])
+  @@index([publishedAt])
+  @@index([type])
+  @@index([videoId, publishedAt])
+}
+
+model AlertRule {
+  id          String   @id @default(cuid())
+  name        String
+  channelIds  String   @default("[]")
+  keywords    String   @default("[]")
+  ntfyTopic   String
+  enabled     Boolean  @default(true)
+  matchAny    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  events NotificationEvent[]
+
+  @@index([enabled])
+}
+
+model NotificationEvent {
+  id          String   @id @default(cuid())
+  ruleId      String
+  messageId   String
+  status      String   @default("PENDING")
+  attempts    Int      @default(0)
+  lastError   String?
+  sentAt      DateTime?
+  createdAt   DateTime @default(now())
+
+  rule AlertRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model ExportArchive {
+  id           String   @id @default(cuid())
+  streamId     String?
+  windowStart  DateTime
+  windowEnd    DateTime
+  path         String
+  format       String
+  sizeBytes    Int      @default(0)
+  messageCount Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  stream Stream? @relation(fields: [streamId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([streamId])
+}
+
+model SystemLog {
+  id        String   @id @default(cuid())
+  level     String
+  source    String
+  message   String
+  meta      String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([level])
+}
+
+model Worker {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  type        String
+  status      String   @default("IDLE")
+  pid         Int?
+  lastHeartbeat DateTime @default(now())
+  meta        String?
+
+  @@index([type])
+}
+
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
