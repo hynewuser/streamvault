@@ -1,7 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
-import { authGuard } from "../lib/auth";
 import { safeJSON } from "../lib/util";
 import { config } from "../config";
 
@@ -15,10 +14,13 @@ const ruleSchema = z.object({
 });
 
 export async function alertRoutes(app: FastifyInstance) {
-  app.addHook("onRequest", authGuard);
+  // ❌ REMOVED: app.addHook("onRequest", authGuard);
 
   app.get("/", async () => {
-    const items = await prisma.alertRule.findMany({ orderBy: { createdAt: "desc" } });
+    const items = await prisma.alertRule.findMany({
+      orderBy: { createdAt: "desc" },
+    });
+
     return {
       items: items.map((r) => ({
         ...r,
@@ -30,8 +32,11 @@ export async function alertRoutes(app: FastifyInstance) {
 
   app.post("/", async (req, reply) => {
     const parsed = ruleSchema.safeParse(req.body);
-    if (!parsed.success) return reply.status(400).send({ error: parsed.error.flatten() });
+    if (!parsed.success)
+      return reply.status(400).send({ error: parsed.error.flatten() });
+
     const data = parsed.data;
+
     const rule = await prisma.alertRule.create({
       data: {
         name: data.name,
@@ -42,16 +47,25 @@ export async function alertRoutes(app: FastifyInstance) {
         matchAny: data.matchAny,
       },
     });
+
     return reply.status(201).send({ rule });
   });
 
   app.put("/:id", async (req: any, reply) => {
     const parsed = ruleSchema.partial().safeParse(req.body);
-    if (!parsed.success) return reply.status(400).send({ error: parsed.error.flatten() });
+    if (!parsed.success)
+      return reply.status(400).send({ error: parsed.error.flatten() });
+
     const data: any = { ...parsed.data };
+
     if (data.channelIds) data.channelIds = JSON.stringify(data.channelIds);
     if (data.keywords) data.keywords = JSON.stringify(data.keywords);
-    const r = await prisma.alertRule.update({ where: { id: req.params.id }, data });
+
+    const r = await prisma.alertRule.update({
+      where: { id: req.params.id },
+      data,
+    });
+
     return { rule: r };
   });
 
@@ -62,10 +76,12 @@ export async function alertRoutes(app: FastifyInstance) {
 
   app.get("/events", async (req: any) => {
     const limit = Math.min(parseInt(req.query.limit ?? "100"), 500);
+
     const items = await prisma.notificationEvent.findMany({
       orderBy: { createdAt: "desc" },
       take: limit,
     });
+
     return { items };
   });
 }
