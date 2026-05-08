@@ -1,0 +1,13 @@
+{
+  "name": "streamvault",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend",
+    "shared"
+  ],
+  "scripts": {
+    "frontend": "npm --workspace frontend run dev",
+    "backend": "npm --workspace backend run dev"
+  }
+}
