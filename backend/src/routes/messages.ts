@@ -1,7 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
-import { authGuard } from "../lib/auth";
 import { safeJSON } from "../lib/util";
 
 const querySchema = z.object({
@@ -18,17 +17,19 @@ const querySchema = z.object({
 });
 
 export async function messageRoutes(app: FastifyInstance) {
-  app.addHook("onRequest", authGuard);
+  // ❌ REMOVED: app.addHook("onRequest", authGuard);
 
   app.get("/", async (req) => {
     const q = querySchema.parse(req.query);
     const where: any = {};
+
     if (q.streamId) where.streamId = q.streamId;
     if (q.videoId) where.videoId = q.videoId;
     if (q.channelId) where.authorChannelId = q.channelId;
     if (q.type) where.type = q.type;
     if (typeof q.isMember === "boolean") where.isMember = q.isMember;
     if (q.q) where.text = { contains: q.q };
+
     if (q.from || q.to) {
       where.publishedAt = {};
       if (q.from) where.publishedAt.gte = new Date(q.from);
@@ -58,10 +59,12 @@ export async function messageRoutes(app: FastifyInstance) {
 
   app.get("/recent", async (req: any) => {
     const limit = Math.min(parseInt(req.query.limit ?? "50"), 200);
+
     const items = await prisma.message.findMany({
       orderBy: { capturedAt: "desc" },
       take: limit,
     });
+
     return {
       items: items.map((m) => ({
         ...m,
@@ -73,12 +76,14 @@ export async function messageRoutes(app: FastifyInstance) {
 
   app.get("/stats/top-chatters", async (req: any) => {
     const limit = Math.min(parseInt(req.query.limit ?? "20"), 100);
+
     const top = await prisma.message.groupBy({
       by: ["authorChannelId", "authorName"],
       _count: { _all: true },
       orderBy: { _count: { authorChannelId: "desc" } },
       take: limit,
     });
+
     return {
       items: top.map((t) => ({
         channelId: t.authorChannelId,
