@@ -1,7 +1,6 @@
 import Fastify, { FastifyInstance } from "fastify";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
-import jwt from "@fastify/jwt";
 import rateLimit from "@fastify/rate-limit";
 import staticPlugin from "@fastify/static";
 import path from "node:path";
@@ -19,8 +18,9 @@ declare module "fastify" {
     io: IOServer;
     prisma: typeof prisma;
   }
+
   interface FastifyRequest {
-    user?: { sub: string; role: string };
+    user?: any;
   }
 }
 
@@ -31,39 +31,49 @@ export async function buildApp(): Promise<FastifyInstance> {
     bodyLimit: 5 * 1024 * 1024,
   });
 
+  // Security headers (still fine to keep)
   await app.register(helmet, { contentSecurityPolicy: false });
+
+  // CORS
   await app.register(cors, {
     origin: config.cors.origin.includes("*") ? true : config.cors.origin,
     credentials: true,
   });
-  await app.register(rateLimit, { max: 300, timeWindow: "1 minute" });
-  await app.register(jwt, { secret: config.auth.jwtSecret });
 
+  // Rate limiting (optional, but harmless)
+  await app.register(rateLimit, { max: 300, timeWindow: "1 minute" });
+
+  // ❌ REMOVED: JWT AUTH PLUGIN (this disables login system entirely)
+
+  // Static files
   await app.register(staticPlugin, {
     root: path.resolve(config.exports.dir),
     prefix: "/files/",
     decorateReply: false,
   });
 
+  // Attach prisma
   app.decorate("prisma", prisma);
 
-  // websocket
+  // WebSocket
   const io = new IOServer(app.server, {
     cors: { origin: true, credentials: true },
     transports: ["websocket", "polling"],
   });
+
   app.decorate("io", io);
   setupWebsocket(io);
 
-  // bridge eventBus -> websocket
+  // Event bus → websocket
   eventBus.on("message", (msg) => io.emit("message", msg));
   eventBus.on("stream_update", (s) => io.emit("stream_update", s));
   eventBus.on("alert", (a) => io.emit("alert", a));
   eventBus.on("system", (e) => io.emit("system", e));
 
-  // routes
+  // Routes (now ALL PUBLIC unless manually protected)
   await registerRoutes(app);
 
+  // Error handler
   app.setErrorHandler((err, req, reply) => {
     req.log.error({ err }, "request error");
     reply.status(err.statusCode ?? 500).send({
