@@ -1,6 +1,5 @@
 import { FastifyInstance } from "fastify";
 import { healthRoutes } from "./health";
-import { authRoutes } from "./auth";
 import { streamRoutes } from "./streams";
 import { messageRoutes } from "./messages";
 import { alertRoutes } from "./alerts";
@@ -10,7 +9,9 @@ import { analyticsRoutes } from "./analytics";
 
 export async function registerRoutes(app: FastifyInstance) {
   await app.register(healthRoutes);
-  await app.register(authRoutes, { prefix: "/api/auth" });
+
+  // ❌ REMOVED: authRoutes (login system disabled)
+
   await app.register(streamRoutes, { prefix: "/api/streams" });
   await app.register(messageRoutes, { prefix: "/api/messages" });
   await app.register(alertRoutes, { prefix: "/api/alerts" });
