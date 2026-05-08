@@ -1,4 +1,4 @@
- frontend/src/app/layout.tsximport type { Metadata } from "next";
+import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 
@@ -7,7 +7,11 @@ export const metadata: Metadata = {
   description: "Real-time YouTube livestream chat capture, archival & alerts",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen antialiased">
